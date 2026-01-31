@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15
+    container_name: gutsense_db
+    environment:
+      POSTGRES_DB: gutsense_db
+      POSTGRES_USER: gutsense_user
+      POSTGRES_PASSWORD: gutsense_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gutsense_user -d gutsense_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Application
+  api:
+    build: .
+    container_name: gutsense_api
+    environment:
+      DATABASE_URL: postgresql://gutsense_user:gutsense_password@db:5432/gutsense_db
+      SECRET_KEY: your-super-secret-key-change-in-production
+      DEBUG: "False"
+      HOST: 0.0.0.0
+      PORT: 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
