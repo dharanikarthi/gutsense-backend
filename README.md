@@ -179,6 +179,33 @@ Once the server is running, visit:
 
 ## 🚀 Deployment
 
+### Vercel Deployment (Recommended)
+
+This backend is configured for easy deployment on Vercel:
+
+1. **Push to GitHub** (already done)
+   ```bash
+   git push origin main
+   ```
+
+2. **Deploy to Vercel**
+   - Go to [vercel.com](https://vercel.com)
+   - Import your GitHub repository: `dharanikarthi/gutsense-backend`
+   - Vercel will automatically detect the Python project
+   - Set environment variables in Vercel dashboard:
+     - `DATABASE_URL`: Your PostgreSQL connection string
+     - `SECRET_KEY`: Your JWT secret key
+     - `DEBUG`: `False`
+
+3. **Environment Variables for Vercel**
+   ```bash
+   DATABASE_URL=postgresql://user:pass@host:5432/db
+   SECRET_KEY=your-super-secret-key-here
+   DEBUG=False
+   HOST=0.0.0.0
+   PORT=8000
+   ```
+
 ### Using Docker (Optional)
 ```bash
 # Build image
@@ -188,12 +215,12 @@ docker build -t gutsense-api .
 docker run -p 8000:8000 gutsense-api
 ```
 
-### Environment Variables for Production
-```bash
-DATABASE_URL=postgresql://user:pass@host:5432/db
-SECRET_KEY=your-super-secret-key-here
-DEBUG=False
-```
+### Database for Production
+For production deployment, consider using:
+- **Vercel Postgres**: Integrated PostgreSQL database
+- **Supabase**: Free PostgreSQL with additional features
+- **Railway**: Simple PostgreSQL hosting
+- **Neon**: Serverless PostgreSQL
 
 ## 🔄 Future Enhancements
 
