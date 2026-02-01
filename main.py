@@ -7,6 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 import base64
 import io
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(
@@ -166,32 +171,57 @@ async def get_food_categories():
 
 @app.post("/api/analyze-food")
 async def analyze_food(food_data: dict):
-    """Enhanced food analysis endpoint with better recognition"""
+    """Enhanced food analysis endpoint with ML model support"""
     food_name = food_data.get("food_name", "").strip()
     image_data = food_data.get("image", None)
     
     if not food_name and not image_data:
         raise HTTPException(status_code=400, detail="Please provide either food name or image")
     
-    # Recognize food from name
+    # If image is provided, use ML model
+    if image_data:
+        try:
+            from models.indian_food_classifier import indian_food_classifier
+            result = indian_food_classifier.predict_food(image_data)
+            return result
+        except Exception as e:
+            logger.error(f"ML prediction failed: {e}")
+            # Fallback to text analysis if available
+            if food_name:
+                food_key = recognize_food_from_text(food_name)
+                return get_food_analysis(food_key, food_name)
+            else:
+                return {
+                    "name": "Image Analysis Failed",
+                    "category": "error",
+                    "reaction": "caution",
+                    "confidence": 0,
+                    "explanation": "Image analysis failed. Please try again or enter food name manually.",
+                    "alternatives": ["Try different image", "Enter food name"],
+                    "tips": ["Use clear photos", "Good lighting", "Show food clearly"],
+                    "error": str(e)
+                }
+    
+    # Text-based recognition
     if food_name:
         food_key = recognize_food_from_text(food_name)
         analysis = get_food_analysis(food_key, food_name)
-    else:
-        # For image analysis, we'll use a simple pattern matching for now
-        # In a real ML implementation, this would process the image
-        analysis = {
-            "name": "Image Analysis",
-            "category": "unknown",
-            "description": "Image processing not available in demo mode",
-            "reaction": "caution",
-            "confidence": 30,
-            "explanation": "Image analysis requires ML models. Please enter the food name for better results.",
-            "alternatives": ["Enter food name manually", "Use text description"],
-            "tips": ["Describe the food in text", "Use specific food names", "Include cuisine type"]
-        }
+        return analysis
     
-    return analysis
+    raise HTTPException(status_code=400, detail="No valid input provided")
+
+@app.get("/api/models/indian-food-info")
+async def get_indian_food_model_info():
+    """Get information about the Indian food classifier model"""
+    try:
+        from models.indian_food_classifier import indian_food_classifier
+        return indian_food_classifier.get_model_info()
+    except Exception as e:
+        return {
+            "error": str(e),
+            "model_loaded": False,
+            "message": "Indian food classifier not available"
+        }
 
 @app.post("/api/demo/analyze-food")
 async def demo_analyze_food(food_data: dict):
