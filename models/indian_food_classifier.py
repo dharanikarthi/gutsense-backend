@@ -188,7 +188,7 @@ class IndianFoodClassifier:
             # Get class name
             if predicted_class < len(self.class_names):
                 predicted_food = self.class_names[predicted_class]
-                food_key = predicted_food.lower().replace(" ", " ")
+                food_key = predicted_food.lower()
                 
                 # Get detailed analysis
                 analysis = self._get_food_analysis(food_key, predicted_food, confidence)

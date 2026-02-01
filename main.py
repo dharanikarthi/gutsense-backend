@@ -4,6 +4,7 @@ GutSense FastAPI Backend - Ultra Lightweight for Vercel
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from typing import Optional
 import base64
 import io
@@ -23,11 +24,20 @@ app = FastAPI(
 # Configure CORS for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=["*"],  # Allow all origins for now
+    allow_credentials=False,  # Set to False when using allow_origins=["*"]
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Additional CORS handling middleware
+@app.middleware("http")
+async def add_cors_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
 
 # Enhanced food database with better recognition
 FOOD_DATABASE = {
@@ -153,6 +163,16 @@ async def health_check():
         "environment": "production",
         "food_database_size": len(FOOD_DATABASE)
     }
+
+@app.options("/api/health")
+async def health_check_options():
+    """Handle preflight requests for health endpoint"""
+    return {"message": "OK"}
+
+@app.options("/api/analyze-food")
+async def analyze_food_options():
+    """Handle preflight requests for analyze-food endpoint"""
+    return {"message": "OK"}
 
 @app.get("/api/demo/food-categories")
 async def get_food_categories():

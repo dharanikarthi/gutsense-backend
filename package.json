@@ -1,0 +1,30 @@
+{
+  "name": "gutsense-backend",
+  "version": "1.0.0",
+  "description": "GutSense Backend API with Google Gemini Integration",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step required for Vercel'",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0"
+  },
+  "devDependencies": {
+    "vercel": "^37.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "food-analysis",
+    "gut-health",
+    "gemini-ai",
+    "vercel",
+    "serverless"
+  ],
+  "author": "GutSense Team",
+  "license": "MIT"
+}
