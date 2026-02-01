@@ -9,17 +9,19 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export default async function handler(req, res) {
-    // Set CORS headers for frontend access
+    // Set CORS headers for all requests
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Max-Age', '86400');
 
     // Handle preflight OPTIONS request
     if (req.method === 'OPTIONS') {
-        return res.status(200).end();
+        res.status(200).end();
+        return;
     }
 
-    // Only allow POST requests
+    // Only allow POST requests for actual analysis
     if (req.method !== 'POST') {
         return res.status(405).json({ 
             error: 'Method not allowed',
@@ -172,13 +174,13 @@ Return ONLY valid JSON, no additional text.
 
         console.log('🎯 Analysis complete:', analysisData.name);
 
-        // Return successful response
+        // Return successful response with CORS headers
         return res.status(200).json(analysisData);
 
     } catch (error) {
         console.error('❌ Error in food analysis:', error);
 
-        // Return error response
+        // Return error response with CORS headers
         return res.status(500).json({
             error: 'Analysis failed',
             message: error.message || 'An unexpected error occurred',
