@@ -4,6 +4,7 @@ GutSense FastAPI Backend - Simplified for Vercel
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
 # Create FastAPI app
 app = FastAPI(
@@ -87,83 +88,6 @@ async def analyze_food(food_data: dict):
             "Chew thoroughly",
             "Stay hydrated"
         ]
-    }
-
-@app.get("/api/models/list")
-async def list_models():
-    """List available ML models"""
-    try:
-        from models.model_loader import model_loader
-        models = model_loader.list_available_models()
-        return {
-            "models": models,
-            "count": len(models),
-            "status": "success"
-        }
-    except Exception as e:
-        return {
-            "models": [],
-            "count": 0,
-            "status": "error",
-            "message": f"Model loading not available: {str(e)}"
-        }
-
-@app.post("/api/models/predict")
-async def predict_with_model(request_data: dict):
-    """Make prediction using ML model"""
-    try:
-        from models.model_loader import model_loader
-        
-        model_name = request_data.get("model_name", "default")
-        input_data = request_data.get("input_data", [])
-        
-        if not input_data:
-            return {
-                "status": "error",
-                "message": "No input data provided"
-            }
-        
-        result = model_loader.predict(model_name, input_data)
-        
-        if result is None:
-            return {
-                "status": "error",
-                "message": f"Model {model_name} not available or failed to load"
-            }
-            
-        return result
-        
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": f"Prediction failed: {str(e)}"
-        }
-
-@app.get("/api/models/status")
-async def model_status():
-    """Check ML model system status"""
-    try:
-        import tensorflow as tf
-        tensorflow_version = tf.__version__
-        tensorflow_available = True
-    except ImportError:
-        tensorflow_version = "Not installed"
-        tensorflow_available = False
-    
-    try:
-        from models.model_loader import model_loader
-        available_models = model_loader.list_available_models()
-        model_loader_available = True
-    except Exception as e:
-        available_models = []
-        model_loader_available = False
-    
-    return {
-        "tensorflow_available": tensorflow_available,
-        "tensorflow_version": tensorflow_version,
-        "model_loader_available": model_loader_available,
-        "available_models": available_models,
-        "model_count": len(available_models)
     }
 
 # For Vercel deployment

@@ -1,5 +1,5 @@
 """
-Vercel API entry point
+Vercel API entry point - Simplified
 """
 
 from main import app
