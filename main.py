@@ -1,9 +1,12 @@
 """
-GutSense FastAPI Backend - Lightweight for Vercel
+GutSense FastAPI Backend - Ultra Lightweight for Vercel
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
+import base64
+import io
 
 # Create FastAPI app
 app = FastAPI(
@@ -15,16 +18,116 @@ app = FastAPI(
 # Configure CORS for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000", 
-        "http://127.0.0.1:3000",
-        "https://gutsense-frontend.vercel.app",
-        "*"
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Enhanced food database with better recognition
+FOOD_DATABASE = {
+    # Indian Foods
+    "unniappam": {
+        "name": "Unniappam",
+        "category": "indian_sweet",
+        "description": "Traditional Kerala sweet made with rice flour, jaggery, and coconut",
+        "reaction": "caution",
+        "confidence": 92,
+        "explanation": "Unniappam is high in sugar (jaggery) and may cause digestive issues for sensitive individuals. The coconut and rice flour are generally gut-friendly.",
+        "alternatives": ["Steamed idli", "Plain dosa", "Coconut rice"],
+        "tips": ["Eat in small portions", "Drink warm water after eating", "Avoid if you have sugar sensitivity"]
+    },
+    "idli": {
+        "name": "Idli",
+        "category": "indian",
+        "description": "Steamed rice and lentil cakes",
+        "reaction": "suitable",
+        "confidence": 95,
+        "explanation": "Idli is fermented and steamed, making it very gut-friendly and easy to digest.",
+        "alternatives": ["Dosa", "Uttapam", "Steamed rice"],
+        "tips": ["Best eaten warm", "Pair with coconut chutney", "Good for sensitive stomachs"]
+    },
+    "dosa": {
+        "name": "Dosa",
+        "category": "indian",
+        "description": "Fermented crepe made from rice and lentils",
+        "reaction": "suitable",
+        "confidence": 90,
+        "explanation": "Dosa is fermented which promotes good gut bacteria, but can be heavy if made with too much oil.",
+        "alternatives": ["Idli", "Uttapam", "Plain rice"],
+        "tips": ["Choose less oily versions", "Eat with sambar for protein", "Avoid spicy chutneys if sensitive"]
+    },
+    "biryani": {
+        "name": "Biryani",
+        "category": "indian",
+        "description": "Spiced rice dish with meat or vegetables",
+        "reaction": "caution",
+        "confidence": 88,
+        "explanation": "Biryani is rich and spicy, which may trigger digestive issues in sensitive individuals.",
+        "alternatives": ["Plain rice with curry", "Pulao", "Khichdi"],
+        "tips": ["Eat small portions", "Drink buttermilk", "Avoid late night consumption"]
+    },
+    "pizza": {
+        "name": "Pizza",
+        "category": "italian",
+        "description": "Flatbread with cheese and toppings",
+        "reaction": "avoid",
+        "confidence": 85,
+        "explanation": "Pizza is high in processed cheese, refined flour, and often greasy, which can cause digestive distress.",
+        "alternatives": ["Whole wheat bread with vegetables", "Grilled chicken salad", "Vegetable soup"],
+        "tips": ["Choose thin crust", "Add vegetables", "Limit cheese"]
+    },
+    "burger": {
+        "name": "Burger",
+        "category": "american",
+        "description": "Sandwich with meat patty and vegetables",
+        "reaction": "avoid",
+        "confidence": 80,
+        "explanation": "Burgers are typically high in processed meat, refined carbs, and unhealthy fats.",
+        "alternatives": ["Grilled chicken wrap", "Vegetable sandwich", "Salad bowl"],
+        "tips": ["Choose grilled over fried", "Add more vegetables", "Skip the fries"]
+    }
+}
+
+# Food recognition patterns
+FOOD_PATTERNS = {
+    "unniappam": ["unniappam", "unniyappam", "sweet ball", "kerala sweet", "jaggery ball"],
+    "idli": ["idli", "steamed cake", "white round", "south indian"],
+    "dosa": ["dosa", "crepe", "pancake", "fermented"],
+    "biryani": ["biryani", "rice dish", "spiced rice", "colored rice"],
+    "pizza": ["pizza", "cheese bread", "flatbread", "italian"],
+    "burger": ["burger", "sandwich", "patty", "bun"]
+}
+
+def recognize_food_from_text(text: str) -> str:
+    """Recognize food from text input"""
+    text_lower = text.lower()
+    
+    for food_key, patterns in FOOD_PATTERNS.items():
+        for pattern in patterns:
+            if pattern in text_lower:
+                return food_key
+    
+    # Default fallback
+    return "unknown"
+
+def get_food_analysis(food_key: str, food_name: str = None) -> dict:
+    """Get detailed food analysis"""
+    if food_key in FOOD_DATABASE:
+        analysis = FOOD_DATABASE[food_key].copy()
+        return analysis
+    
+    # Generic analysis for unknown foods
+    return {
+        "name": food_name or "Unknown Food",
+        "category": "unknown",
+        "description": "Food not in database",
+        "reaction": "caution",
+        "confidence": 50,
+        "explanation": f"We don't have specific information about {food_name or 'this food'}. Please consult with a nutritionist for personalized advice.",
+        "alternatives": ["Steamed vegetables", "Plain rice", "Grilled chicken"],
+        "tips": ["Eat in moderation", "Monitor your body's response", "Keep a food diary"]
+    }
 
 @app.get("/")
 async def root():
@@ -40,9 +143,10 @@ async def health_check():
     """Detailed health check"""
     return {
         "status": "healthy",
-        "database": "demo_mode",
+        "database": "enhanced_demo",
         "version": "1.0.0",
-        "environment": "production"
+        "environment": "production",
+        "food_database_size": len(FOOD_DATABASE)
     }
 
 @app.get("/api/demo/food-categories")
@@ -51,6 +155,7 @@ async def get_food_categories():
     return {
         "categories": [
             {"id": "indian", "name": "Indian", "icon": "🍛"},
+            {"id": "indian_sweet", "name": "Indian Sweets", "icon": "🍮"},
             {"id": "italian", "name": "Italian", "icon": "🍕"},
             {"id": "chinese", "name": "Chinese", "icon": "🍜"},
             {"id": "mexican", "name": "Mexican", "icon": "🌮"},
@@ -59,67 +164,69 @@ async def get_food_categories():
         ]
     }
 
-@app.get("/api/demo/gut-types")
-async def get_gut_types():
-    """Get available gut types"""
-    return {
-        "gut_types": [
-            {"id": "balanced", "name": "Balanced", "description": "Normal digestive health"},
-            {"id": "high_inflammation", "name": "High Inflammation", "description": "Prone to inflammatory responses"},
-            {"id": "low_diversity", "name": "Low Diversity", "description": "Limited gut microbiome diversity"}
-        ]
-    }
+@app.post("/api/analyze-food")
+async def analyze_food(food_data: dict):
+    """Enhanced food analysis endpoint with better recognition"""
+    food_name = food_data.get("food_name", "").strip()
+    image_data = food_data.get("image", None)
+    
+    if not food_name and not image_data:
+        raise HTTPException(status_code=400, detail="Please provide either food name or image")
+    
+    # Recognize food from name
+    if food_name:
+        food_key = recognize_food_from_text(food_name)
+        analysis = get_food_analysis(food_key, food_name)
+    else:
+        # For image analysis, we'll use a simple pattern matching for now
+        # In a real ML implementation, this would process the image
+        analysis = {
+            "name": "Image Analysis",
+            "category": "unknown",
+            "description": "Image processing not available in demo mode",
+            "reaction": "caution",
+            "confidence": 30,
+            "explanation": "Image analysis requires ML models. Please enter the food name for better results.",
+            "alternatives": ["Enter food name manually", "Use text description"],
+            "tips": ["Describe the food in text", "Use specific food names", "Include cuisine type"]
+        }
+    
+    return analysis
 
 @app.post("/api/demo/analyze-food")
-async def analyze_food(food_data: dict):
-    """Demo food analysis endpoint"""
-    food_name = food_data.get("food_name", "Unknown Food")
+async def demo_analyze_food(food_data: dict):
+    """Demo food analysis - redirects to main analysis"""
+    return await analyze_food(food_data)
+
+@app.get("/api/foods/search")
+async def search_foods(q: str = ""):
+    """Search for foods in database"""
+    if not q:
+        return {"foods": list(FOOD_DATABASE.keys())[:10]}
     
-    # Simple demo analysis
-    return {
-        "food_name": food_name,
-        "reaction": "suitable",
-        "confidence_score": 85,
-        "explanation": f"{food_name} appears to be suitable for your gut profile based on general guidelines.",
-        "alternatives": ["Grilled chicken", "Steamed vegetables", "Brown rice"],
-        "tips": [
-            "Eat in moderation",
-            "Chew thoroughly",
-            "Stay hydrated"
-        ]
-    }
+    q_lower = q.lower()
+    matches = []
+    
+    for food_key, food_info in FOOD_DATABASE.items():
+        if (q_lower in food_key.lower() or 
+            q_lower in food_info["name"].lower() or
+            q_lower in food_info["description"].lower()):
+            matches.append({
+                "key": food_key,
+                "name": food_info["name"],
+                "category": food_info["category"],
+                "description": food_info["description"]
+            })
+    
+    return {"foods": matches[:10]}
 
-@app.get("/api/models/status")
-async def model_status():
-    """Check ML model system status - lightweight version"""
-    return {
-        "tensorflow_available": False,
-        "tensorflow_version": "Not available in lightweight mode",
-        "model_loader_available": False,
-        "available_models": [],
-        "model_count": 0,
-        "mode": "lightweight",
-        "message": "ML models disabled for Vercel compatibility"
-    }
-
-@app.get("/api/models/list")
-async def list_models():
-    """List available ML models - lightweight version"""
-    return {
-        "models": [],
-        "count": 0,
-        "status": "disabled",
-        "message": "ML models disabled for Vercel compatibility"
-    }
-
-@app.post("/api/models/predict")
-async def predict_with_model(request_data: dict):
-    """Make prediction using ML model - lightweight version"""
-    return {
-        "status": "disabled",
-        "message": "ML model predictions disabled for Vercel compatibility",
-        "suggestion": "Use the demo food analysis endpoint instead: /api/demo/analyze-food"
-    }
+@app.get("/api/foods/{food_key}")
+async def get_food_info(food_key: str):
+    """Get detailed information about a specific food"""
+    if food_key not in FOOD_DATABASE:
+        raise HTTPException(status_code=404, detail="Food not found")
+    
+    return FOOD_DATABASE[food_key]
 
 # For Vercel deployment
 handler = app
